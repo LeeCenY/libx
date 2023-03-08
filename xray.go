@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/xtls/xray-core/common/cmdarg"
 	xnet "github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/core"
 	_ "github.com/xtls/xray-core/main/distro/all"
@@ -20,7 +21,8 @@ var (
 )
 
 func startXray(configFile string) (*core.Instance, error) {
-	config, err := core.LoadConfig("json", configFile)
+	file := cmdarg.Arg{configFile}
+	config, err := core.LoadConfig("json", file)
 	if err != nil {
 		return nil, err
 	}
