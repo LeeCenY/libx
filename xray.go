@@ -20,6 +20,11 @@ var (
 	coreServer *core.Instance
 )
 
+const (
+	PingDelayTimeout int = 11000
+	PingDelayError   int = 10000
+)
+
 func startXray(configFile string) (*core.Instance, error) {
 	file := cmdarg.Arg{configFile}
 	config, err := core.LoadConfig("json", file)
@@ -73,11 +78,11 @@ func Ping(datDir string, config string, timeout int, url string) string {
 	initEnv(datDir)
 	server, err := startXray(config)
 	if err != nil {
-		return fmt.Sprintf("0:%s", err)
+		return fmt.Sprintf("%d:%s", PingDelayError, err)
 	}
 
 	if err := server.Start(); err != nil {
-		return fmt.Sprintf("0:%s", err)
+		return fmt.Sprintf("%d:%s", PingDelayError, err)
 	}
 	defer server.Close()
 
@@ -90,9 +95,9 @@ func Ping(datDir string, config string, timeout int, url string) string {
 
 func measureDelay(inst *core.Instance, timeout time.Duration, url string) (int64, error) {
 	start := time.Now()
-	_, err := coreHTTPRequest(inst, timeout, url)
+	delay, err := coreHTTPRequest(inst, timeout, url)
 	if err != nil {
-		return 0, err
+		return int64(delay), err
 	}
 	return time.Since(start).Milliseconds(), nil
 }
@@ -124,13 +129,13 @@ func coreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, e
 func coreHTTPRequest(inst *core.Instance, timeout time.Duration, url string) (int, error) {
 	c, err := coreHTTPClient(inst, timeout)
 	if err != nil {
-		return 0, err
+		return PingDelayError, err
 	}
 
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, err := c.Do(req)
 	if err != nil {
-		return -1, err
+		return PingDelayTimeout, err
 	}
 	return resp.StatusCode, nil
 }
