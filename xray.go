@@ -22,8 +22,8 @@ var (
 )
 
 const (
-	PingDelayTimeout int = 11000
-	PingDelayError   int = 10000
+	pingDelayTimeout int = 11000
+	pingDelayError   int = 10000
 )
 
 func startXray(configFile string) (*core.Instance, error) {
@@ -79,11 +79,11 @@ func Ping(datDir string, config string, timeout int, url string) string {
 	initEnv(datDir)
 	server, err := startXray(config)
 	if err != nil {
-		return fmt.Sprintf("%d:%s", PingDelayError, err)
+		return fmt.Sprintf("%d:%s", pingDelayError, err)
 	}
 
 	if err := server.Start(); err != nil {
-		return fmt.Sprintf("%d:%s", PingDelayError, err)
+		return fmt.Sprintf("%d:%s", pingDelayError, err)
 	}
 	defer server.Close()
 
@@ -130,13 +130,13 @@ func coreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, e
 func coreHTTPRequest(inst *core.Instance, timeout time.Duration, url string) (int, error) {
 	c, err := coreHTTPClient(inst, timeout)
 	if err != nil {
-		return PingDelayError, err
+		return pingDelayError, err
 	}
 
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, err := c.Do(req)
 	if err != nil {
-		return PingDelayTimeout, err
+		return pingDelayTimeout, err
 	}
 	return resp.StatusCode, nil
 }
