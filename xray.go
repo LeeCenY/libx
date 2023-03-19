@@ -22,8 +22,8 @@ var (
 )
 
 const (
-	pingDelayTimeout int = 11000
-	pingDelayError   int = 10000
+	pingDelayTimeout int64 = 11000
+	pingDelayError   int64 = 10000
 )
 
 func startXray(configFile string) (*core.Instance, error) {
@@ -75,32 +75,43 @@ func XrayVersion() string {
 	return core.Version()
 }
 
-func Ping(datDir string, config string, timeout int, url string) string {
+func Ping(datDir string, config string, timeout int, url string) int64 {
 	initEnv(datDir)
 	server, err := startXray(config)
 	if err != nil {
-		return fmt.Sprintf("%d:%s", pingDelayError, err)
+		return pingDelayError
 	}
 
 	if err := server.Start(); err != nil {
-		return fmt.Sprintf("%d:%s", pingDelayError, err)
+		return pingDelayError
 	}
 	defer server.Close()
 
-	delay, err := measureDelay(server, time.Second*time.Duration(timeout), url)
-	if err != nil {
-		return fmt.Sprintf("%d:%s", delay, err)
-	}
-	return fmt.Sprintf("%d:", delay)
+	delay := measureDelay(server, time.Second*time.Duration(timeout), url)
+	return delay
 }
 
-func measureDelay(inst *core.Instance, timeout time.Duration, url string) (int64, error) {
-	start := time.Now()
-	delay, err := coreHTTPRequest(inst, timeout, url)
+func measureDelay(inst *core.Instance, timeout time.Duration, url string) int64 {
+	c, err := coreHTTPClient(inst, timeout)
 	if err != nil {
-		return int64(delay), err
+		return pingDelayError
 	}
-	return time.Since(start).Milliseconds(), nil
+	delaySum := int64(0)
+	count := int64(0)
+	times := 3
+	isValid := false
+	for i := 0; i < times; i++ {
+		delay := coreHTTPRequest(c, url)
+		if delay != pingDelayTimeout {
+			delaySum += delay
+			count += 1
+			isValid = true
+		}
+	}
+	if !isValid {
+		return pingDelayTimeout
+	}
+	return delaySum / count
 }
 
 func coreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, error) {
@@ -127,18 +138,14 @@ func coreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, e
 	return c, nil
 }
 
-func coreHTTPRequest(inst *core.Instance, timeout time.Duration, url string) (int, error) {
-	c, err := coreHTTPClient(inst, timeout)
-	if err != nil {
-		return pingDelayError, err
-	}
-
+func coreHTTPRequest(c *http.Client, url string) int64 {
+	start := time.Now()
 	req, _ := http.NewRequest("GET", url, nil)
-	resp, err := c.Do(req)
+	_, err := c.Do(req)
 	if err != nil {
-		return pingDelayTimeout, err
+		return pingDelayTimeout
 	}
-	return resp.StatusCode, nil
+	return time.Since(start).Milliseconds()
 }
 
 func CustomUUID(str string) string {
