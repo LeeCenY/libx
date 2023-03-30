@@ -1,5 +1,13 @@
 package libxray
 
+//go mod init libxray
+//go mod tidy
+//go install golang.org/x/mobile/cmd/gomobile@latest
+//gomobile init
+//go get -d golang.org/x/mobile/cmd/gomobile
+//gomobile bind -target ios
+//gomobile bind -target macos
+
 import (
 	"context"
 	"errors"
@@ -41,12 +49,15 @@ func startXray(configFile string) (*core.Instance, error) {
 	return server, nil
 }
 
-func initEnv(datDir string) {
+func initEnv(datDir string, maxMemory string) {
 	os.Setenv("xray.location.asset", datDir)
+	if maxMemory != "" {
+		os.Setenv("GOMEMLIMIT", maxMemory)
+	}
 }
 
-func RunXray(datDir string, config string) string {
-	initEnv(datDir)
+func RunXray(datDir string, config string, maxMemory string) string {
+	initEnv(datDir, maxMemory)
 	coreServer, err := startXray(config)
 	if err != nil {
 		return err.Error()
@@ -76,7 +87,7 @@ func XrayVersion() string {
 }
 
 func Ping(datDir string, config string, timeout int, url string) int64 {
-	initEnv(datDir)
+	initEnv(datDir, "")
 	server, err := startXray(config)
 	if err != nil {
 		return pingDelayError
