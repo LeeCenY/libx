@@ -1,13 +1,5 @@
 package libxray
 
-//go mod init libxray
-//go mod tidy
-//go install golang.org/x/mobile/cmd/gomobile@latest
-//gomobile init
-//go get -d golang.org/x/mobile/cmd/gomobile
-//gomobile bind -target ios
-//gomobile bind -target macos
-
 import (
 	"context"
 	"errors"
