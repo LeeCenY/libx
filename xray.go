@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -42,15 +43,20 @@ func startXray(configFile string) (*core.Instance, error) {
 	return server, nil
 }
 
-func initEnv(datDir string, maxMemory string) {
+func initEnv(datDir string) {
 	os.Setenv("xray.location.asset", datDir)
-	if maxMemory != "" {
-		os.Setenv("GOMEMLIMIT", maxMemory)
-	}
 }
 
-func RunXray(datDir string, config string, maxMemory string) string {
-	initEnv(datDir, maxMemory)
+func setMaxMemory(maxMemory int64) {
+	debug.SetGCPercent(10)
+	debug.SetMemoryLimit(maxMemory)
+}
+
+func RunXray(datDir string, config string, maxMemory int64) string {
+	initEnv(datDir)
+	if maxMemory > 0 {
+		setMaxMemory(maxMemory)
+	}
 	coreServer, err := startXray(config)
 	if err != nil {
 		return err.Error()
@@ -80,7 +86,7 @@ func XrayVersion() string {
 }
 
 func Ping(datDir string, config string, timeout int, url string) int64 {
-	initEnv(datDir, "")
+	initEnv(datDir)
 	server, err := startXray(config)
 	if err != nil {
 		return pingDelayError
