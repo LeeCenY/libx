@@ -67,6 +67,7 @@ func RunXray(datDir string, config string, maxMemory int64) string {
 	}
 
 	runtime.GC()
+	debug.FreeOSMemory()
 	return ""
 }
 
