@@ -50,7 +50,7 @@ func initEnv(datDir string) {
 
 func setMaxMemory(maxMemory int64) {
 	os.Setenv("xray.inbound.memory.check", "1")
-	memory.InitMemoryCheck(maxMemory)
+	memory.InitMemoryCheck(maxMemory, 2*time.Second)
 }
 
 func RunXray(datDir string, config string, maxMemory int64) string {
