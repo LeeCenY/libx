@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"runtime"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -49,8 +48,8 @@ func initEnv(datDir string) {
 }
 
 func setMaxMemory(maxMemory int64) {
-	os.Setenv("xray.inbound.memory.check", "1")
-	memory.InitMemoryCheck(maxMemory, 2*time.Second)
+	os.Setenv("XRAY_MEMORY_FORCEFREE", "1")
+	memory.InitForceFree(maxMemory)
 }
 
 func RunXray(datDir string, config string, maxMemory int64) string {
@@ -67,7 +66,6 @@ func RunXray(datDir string, config string, maxMemory int64) string {
 		return err.Error()
 	}
 
-	runtime.GC()
 	debug.FreeOSMemory()
 	return ""
 }
