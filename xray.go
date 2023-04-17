@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/xtls/xray-core/common/cmdarg"
+	"github.com/xtls/xray-core/common/memory"
 	xnet "github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/common/uuid"
 	"github.com/xtls/xray-core/core"
@@ -48,8 +49,8 @@ func initEnv(datDir string) {
 }
 
 func setMaxMemory(maxMemory int64) {
-	debug.SetGCPercent(10)
-	debug.SetMemoryLimit(maxMemory)
+	os.Setenv("xray.inbound.memory.check", "1")
+	memory.InitMemoryCheck(maxMemory, 2*time.Second)
 }
 
 func RunXray(datDir string, config string, maxMemory int64) string {
