@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"runtime"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -49,8 +48,8 @@ func initEnv(datDir string) {
 }
 
 func setMaxMemory(maxMemory int64) {
-	os.Setenv("xray.inbound.memory.check", "1")
-	memory.InitMemoryCheck(maxMemory, 2*time.Second)
+	os.Setenv("XRAY_MEMORY_FORCEFREE", "1")
+	memory.InitForceFree(maxMemory)
 }
 
 func RunXray(datDir string, config string, maxMemory int64) string {
@@ -67,7 +66,6 @@ func RunXray(datDir string, config string, maxMemory int64) string {
 		return err.Error()
 	}
 
-	runtime.GC()
 	debug.FreeOSMemory()
 	return ""
 }
@@ -87,43 +85,45 @@ func XrayVersion() string {
 	return core.Version()
 }
 
-func Ping(datDir string, config string, timeout int, url string) int64 {
+func Ping(datDir string, config string, timeout int, url string) string {
 	initEnv(datDir)
 	server, err := startXray(config)
 	if err != nil {
-		return pingDelayError
+		return fmt.Sprintf("%d:%s", pingDelayError, err)
 	}
 
 	if err := server.Start(); err != nil {
-		return pingDelayError
+		return fmt.Sprintf("%d:%s", pingDelayError, err)
 	}
 	defer server.Close()
 
-	delay := measureDelay(server, time.Second*time.Duration(timeout), url)
-	return delay
+	return measureDelay(server, time.Second*time.Duration(timeout), url)
 }
 
-func measureDelay(inst *core.Instance, timeout time.Duration, url string) int64 {
+func measureDelay(inst *core.Instance, timeout time.Duration, url string) string {
 	c, err := coreHTTPClient(inst, timeout)
 	if err != nil {
-		return pingDelayError
+		return fmt.Sprintf("%d:%s", pingDelayError, err)
 	}
 	delaySum := int64(0)
 	count := int64(0)
 	times := 3
 	isValid := false
+	lastErr := ""
 	for i := 0; i < times; i++ {
-		delay := coreHTTPRequest(c, url)
+		delay, err := coreHTTPRequest(c, url)
 		if delay != pingDelayTimeout {
 			delaySum += delay
 			count += 1
 			isValid = true
+		} else {
+			lastErr = err.Error()
 		}
 	}
 	if !isValid {
-		return pingDelayTimeout
+		return fmt.Sprintf("%d:%s", pingDelayTimeout, lastErr)
 	}
-	return delaySum / count
+	return fmt.Sprintf("%d:%s", delaySum/count, lastErr)
 }
 
 func coreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, error) {
@@ -150,14 +150,14 @@ func coreHTTPClient(inst *core.Instance, timeout time.Duration) (*http.Client, e
 	return c, nil
 }
 
-func coreHTTPRequest(c *http.Client, url string) int64 {
+func coreHTTPRequest(c *http.Client, url string) (int64, error) {
 	start := time.Now()
 	req, _ := http.NewRequest("GET", url, nil)
 	_, err := c.Do(req)
 	if err != nil {
-		return pingDelayTimeout
+		return pingDelayTimeout, err
 	}
-	return time.Since(start).Milliseconds()
+	return time.Since(start).Milliseconds(), nil
 }
 
 func CustomUUID(str string) string {
